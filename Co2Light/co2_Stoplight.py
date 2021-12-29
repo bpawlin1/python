@@ -183,10 +183,10 @@ if __name__=="__main__":
 
     while True:
         # Settings for database connection
-        hostname = '127.0.0.1'
-        username = 'bpawling'
-        password = 'Bandit2015'
-        database = 'Environmental_Data'
+        hostname = ''
+        username = ''
+        password = ''
+        database = ''
 
         device = 'dev-pi'
         co2Data = main()
