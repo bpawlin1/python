@@ -18,6 +18,7 @@ import qwiic_led_stick
 from digitalio import DigitalInOut, Direction, Pull
 from adafruit_pm25.i2c import PM25_I2C
 import serial
+import adafruit_bme680
 
 
 
@@ -76,6 +77,8 @@ def insert_record( device, datetime, temp, hum, co2, co2_rating ):
         except Exception as error:
             print(error)
 
+
+
 def ledStick(co2):
     LED_stick = qwiic_led_stick.QwiicLEDStick()
     if LED_stick.begin() == False:
@@ -83,62 +86,90 @@ def ledStick(co2):
 
     print("\nLED Stick ready!")
     LED_stick.set_all_LED_brightness(1)
-    LED_stick.LED_off()
-
-    co2Value = co2
-    co2Data = int(float(co2Value))
-    print(co2Data)
+    LED_stick.set_all_LED_color(70,130,180)
+    try:
+        if len(co2) > 1 :
+            co2Value = co2
+            co2Data = int(float(co2Value))
+            print(co2Data)
     
-    if co2Data < 1000:
-        LED_stick.set_all_LED_color(0, 225, 0)
-    elif co2Data > 1000 and  co2Data < 2000:
-        LED_stick.set_all_LED_color(225, 225, 0)
-    elif co2Data > 2000 and  co2Data < 5000:
-        LED_stick.set_all_LED_color(225, 128, 0)
-    elif co2Data > 5000:
-        LED_stick.set_all_LED_color(225, 0, 0)
-    
+            if co2Data < 1000:
+                LED_stick.set_all_LED_color(0, 225, 0)
+            elif co2Data > 1000 and  co2Data < 2000:
+                LED_stick.set_all_LED_color(225, 225, 0)
+            elif co2Data > 2000 and  co2Data < 5000:
+                LED_stick.set_all_LED_color(225, 128, 0)
+            elif co2Data > 5000:
+                LED_stick.set_all_LED_color(225, 0, 0)
+    except Exception as e:
+        print(e)
+        LED_stick.set_all_LED_color(0, 0, 0)
 
-def LedScreen(co2):
-    myLCD = qwiic_serlcd.QwiicSerlcd()
+def LedScreen(combined_data):
+    try:
+        myLCD = qwiic_serlcd.QwiicSerlcd()
 
-    if myLCD.connected == False:
-        print("The Qwiic SerLCD device isn't connected to the system. Please check your connection", \
-            file=sys.stderr)
-        return
+        if myLCD.connected == False:
+            print("The Qwiic SerLCD device isn't connected to the system. Please check your connection", \
+                file=sys.stderr)
+            return
 
-    myLCD.setBacklight(255, 255, 255) # Set backlight to bright white
-    myLCD.setContrast(5) 
-    myLCD.clearScreen() # clear the screen
+        myLCD.setBacklight(0, 0, 255) # Set backlight to bright white
+        myLCD.setContrast(1) 
+        myLCD.clearScreen() # clear the screen
    
-    lcdDate = datetime.datetime.now().strftime(' %m/%d, %H:%M')
-    print(lcdDate)
-    
-    co2Float = float(co2[1])
-    co2Value = int(co2Float)
-    if co2Value < 1000:
-        myLCD.setBacklight(0, 255, 0)# bright green
-    elif co2Value > 1000 and  co2Value < 2000:
-        myLCD.setBacklight(255, 255, 0)# bright yellow
-    elif co2Value > 2000 and  co2Value < 5000:
-        myLCD.setBacklight(225, 128, 0)# bright Orange
-    elif co2Value > 5000:
-        myLCD.setBacklight(255, 0, 0)# Red
+        lcdDate = datetime.datetime.now().strftime(' %m/%d, %H:%M')
+        print(lcdDate)
+        if len(combined_data) > 1:
+            try:
+                co2Float = float(combined_data[1])
+                co2Value = int(co2Float)
+                if co2Value < 1000:
+                    myLCD.setBacklight(0, 255, 0)# bright green
+                elif co2Value > 1000 and  co2Value < 2000:
+                    myLCD.setBacklight(255, 255, 0)# bright yellow
+                elif co2Value > 2000 and  co2Value < 5000:
+                    myLCD.setBacklight(225, 128, 0)# bright Orange
+                elif co2Value > 5000:
+                    myLCD.setBacklight(255, 0, 0)# Red
 
-    data = co2[2]
-    temp = (format(int(float(co2[1])),'.2f'))
+                data = combined_data[2]
+                temp = (format(int(float(combined_data[3])),'.1f'))
+                humidity = (format(int(float(combined_data[4])),'.1f'))
+        
+                myLCD.print( lcdDate)
+                myLCD.setCursor(0,1)
+                myLCD.print(data + " ")
+                myLCD.print(str(temp) + " " + str(humidity))
+            except Exception as e:
+	            print(e)
+    except Exception as e:
+        print(e)
+        myLCD.print( lcdDate)
+        myLCD.setCursor(0,1)
+        myLCD.print("Parsing Error")
     
-    myLCD.print(" " + lcdDate)
-    myLCD.setCursor(0,1)
-    myLCD.print("CO2:" + data + " ")
-    myLCD.print(str(temp) + "f")
+def bme680():
+    i2ca = board.I2C() 
+    bme680 = adafruit_bme680.Adafruit_BME680_I2C(i2ca, debug=False)
+    
+    bme_data = []
+    bmetemp = bme680.temperature * 9/5.0 + 32
+    bmehumidity = bme680.relative_humidity
+    bmegas = bme680.gas
+    bmepressure = bme680.pressure
+    bmealtitude = bme680.altitude
 
-    
+    bme_data = format(bmetemp,'.2f'),format(bmehumidity,'.1f'), bmegas,format(bmepressure, '.2f'), format(bmealtitude, '.2f')
+    print(bme_data)
+    return bme_data
 
 def main():
     # Main loop
     i2c = busio.I2C(board.SCL, board.SDA)
     scd = adafruit_scd30.SCD30(i2c)
+    
+    
     now = datetime.datetime.now()
     date = now.strftime('%Y-%m-%d %H:%M:%S')
     co2_Data = []
@@ -178,21 +209,45 @@ def main():
             
 
 if __name__=="__main__":
-
-
-
+    f = open("co2ErrorFile", "a")
     while True:
         # Settings for database connection
-        hostname = ''
-        username = ''
-        password = ''
-        database = ''
+        hostname = '192.168.0.33'
+        username = 'remote'
+        password = 'Bandit2015'
+        database = 'Environmental_Data'
 
         device = 'dev-pi'
-        co2Data = main()
 
-        ledStick(co2Data[1])
-        LedScreen(co2Data)
-        particleSensor()
+        combined_data = []
+        co2Data =[]
+        try:
+            co2Data = main()
+        except Exception as e:
+            print(e)
+            f.write(str(e))        
+        try:
+            ledStick(co2Data[1])
+        except Exception as e:
+            print(e)
+            f.write(str(e))
+        try:
+            bme_data = bme680()
+        except Exception as e:
+            print(e)   
+
+        combined_data = co2Data + bme_data
+        print(combined_data)
+        try:
+            LedScreen(combined_data)
+        except Exception as e:
+            print(e)
+            f.write(str(e))
+            
+        try:
+            particleSensor()
+        except Exception as e:
+            print(e)
+            f.write(str(e))
         time.sleep(360)
-   
+        f.close()
