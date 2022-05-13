@@ -1,4 +1,5 @@
 
+
 #
 #
 # This project will collect temperature,  humidity, and CO2  information using a SCD30 sensor
@@ -212,10 +213,10 @@ if __name__=="__main__":
     f = open("co2ErrorFile", "a")
     while True:
         # Settings for database connection
-        hostname = '192.168.0.33'
-        username = 'remote'
-        password = 'Bandit2015'
-        database = 'Environmental_Data'
+        hostname = '****'
+        username = '***'
+        password = '****'
+        database = '****'
 
         device = 'dev-pi'
 
