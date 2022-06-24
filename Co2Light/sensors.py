@@ -172,7 +172,7 @@ if __name__=="__main__":
     combined_data = {}
     co2Data ={"device": device, "dt": date}
     try:
-        co2Data += main()
+        co2Data = co2_Data | main()
     except Exception as e:
         print(e)
     try:
