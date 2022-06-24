@@ -117,8 +117,7 @@ def main():
 
         try:
 
-            now = datetime.datetime.now()
-            date = now.strftime('%Y-%m-%d %H:%M:%S')
+            
 
             try:
                 data = scd.data_available
@@ -166,10 +165,14 @@ if __name__=="__main__":
     password = 'Bandit2015'
     database = 'eniv_data'
     device = 'dev-pi'
+
+    now = datetime.datetime.now()
+    date = now.strftime('%Y-%m-%d %H:%M:%S')
+
     combined_data = {}
-    co2Data ={}
+    co2Data ={"device": device, "dt": date}
     try:
-        co2Data = main()
+        co2Data += main()
     except Exception as e:
         print(e)
     try:
