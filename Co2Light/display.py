@@ -90,10 +90,10 @@ import mysql.connector
 #
 def main():
     #Settings for database connection
-    hostname = '192.168.0.33'
+    hostname = '192.168.0.32'
     username = 'remote'
     password = 'Bandit2015'
-    database = 'Environmental_Data'
+    database = 'eniv_data'
     device = 'dev-pi'
     combined_data = []
     co2Data =[]

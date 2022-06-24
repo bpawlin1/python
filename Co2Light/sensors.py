@@ -68,15 +68,20 @@ def particleSensor():
 
 
 # Routine to insert temperature records into the Environmental_Data co2_data table:
-def insert_record( device, datetime, temp, hum, co2, co2_rating ):
-        query = "INSERT INTO co2_data (device,datetime,temp,humidity,co2,co2_rating) " \
-                "VALUES (%s,%s,%s,%s,%s,%s)"
-        args = (device, datetime,temp,hum,co2,co2_rating)
+def insert_record( combined_data ):
+        #query = "INSERT INTO co2_data (device,datetime,temp,humidity,co2,co2_rating) " \
+        #        "VALUES (%s,%s,%s,%s,%s,%s)"
+        #args = (device, datetime,temp,hum,co2,co2_rating)
+        #mydict = {'user': 'Bot', 'version': 0.15, 'items': 43, 'methods': 'standard', 'time': 1536304833437, 'logs': 'no', 'status': 'completed'}
 
+        columns = ', '.join("`" + str(x).replace('/', '_') + "`" for x in combined_data.keys())
+        values = ', '.join("'" + str(x).replace('/', '_') + "'" for x in combined_data.values())
+        sql = "INSERT INTO %s ( %s ) VALUES ( %s );" % ('indoor_air', columns, values)
+        print(sql)
         try:
             conn = mysql.connector.connect( host=hostname, user=username, passwd=password, db=database )
             cursor = conn.cursor()
-            cursor.execute(query, args)
+            cursor.execute(sql)
             conn.commit()
             cursor.close()
             conn.close()
@@ -100,7 +105,7 @@ def bme680():
             bmepressure = bme680.pressure
             bmealtitude = bme680.altitude
 
-            bme_data ={"bme temp": format(bmetemp,'.2f'),"bme humidity":format(bmehumidity,'.1f'),"bme gas": bmegas,"bme Pressure":format(bmepressure, '.2f'),"bme altitude": format(bmealtitude, '.2f')}
+            bme_data ={"bme_temp": format(bmetemp,'.2f'),"bme_humidity":format(bmehumidity,'.1f'),"bme_gas": bmegas,"bme_Pressure":format(bmepressure, '.2f'),"bme_altitude": format(bmealtitude, '.2f')}
             #print(bme_data)
         except Exception as e:
             print(e)
@@ -139,13 +144,8 @@ def main():
 
                 if scd.CO2 > 5000:
                     co2_rating = "Very Bad"
-            try:
-                insert_record(device,str(date),format(temp,'.2f'),format(humidity,'.2f'), format(co2,'.2f'), co2_rating)
-                #print (device,str(date),format(temp,'.2f'),format(humidity,'.2f'), format(co2,'.2f'), co2_rating)
-            except:
-                pass
 
-            co2_Data ={"scd30 temp": format(temp,'.2f'),"CO2":format(co2,'.2f'),"CO2 rating": co2_rating}
+            co2_Data ={"scd30_temp": format(temp,'.2f'),"CO2":format(co2,'.2f'),"CO2_rating": co2_rating}
             #print(co2_Data)
         except:
             print("error 1")
@@ -171,7 +171,7 @@ if __name__=="__main__":
     co2Data ={}
     try:
         co2Data = main()
-
+        print(co2Data)
         try:
             combined_data = default | co2Data
         except Exception as e:
@@ -181,6 +181,7 @@ if __name__=="__main__":
         print(e)
     try:
         bme_data = bme680()
+        print(bme_data)
         try:
             combined_data = combined_data | bme_data
         except Exception as e:
@@ -189,11 +190,12 @@ if __name__=="__main__":
         print(e)
     try:
         particle_data = particleSensor()
+        print(particle_data)
         try:
            combined_data = dict(list(combined_data.items()) + list(particle_data.items()))
         except Exception as e:
             print(e)
     except Exception as e:
         print(e)
-
+    insert_record(combined_data)
     print(combined_data)
