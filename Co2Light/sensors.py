@@ -116,9 +116,6 @@ def main():
         scd = adafruit_scd30.SCD30(i2c)
 
         try:
-
-            
-
             try:
                 data = scd.data_available
             except RuntimeError:
@@ -169,21 +166,33 @@ if __name__=="__main__":
     now = datetime.datetime.now()
     date = now.strftime('%Y-%m-%d %H:%M:%S')
 
-    combined_data = {"device": device, "dt": date}
+    combined_data = {}
+    default ={"device": device, "dt": date}
     co2Data ={}
     try:
         co2Data = main()
-        combined_data = dict(list(combined_data.items()) + list(co2Data.items()))
+
+        try:
+            combined_data = default | co2Data
+        except Exception as e:
+            print(e)
+
     except Exception as e:
         print(e)
     try:
         bme_data = bme680()
-        combined_data = dict(list(combined_data.items()) + list(bme_data.items()))
+        try:
+            combined_data = combined_data | bme_data
+        except Exception as e:
+            print(e)
     except Exception as e:
         print(e)
     try:
         particle_data = particleSensor()
-        combined_data = dict(list(combined_data.items()) + list(particle_data.items()))
+        try:
+           combined_data = dict(list(combined_data.items()) + list(particle_data.items()))
+        except Exception as e:
+            print(e)
     except Exception as e:
         print(e)
 
