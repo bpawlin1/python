@@ -17,7 +17,12 @@ from adafruit_pm25.i2c import PM25_I2C
 import serial
 import adafruit_bme680
 
+#mydict = {'user': 'Bot', 'version': 0.15, 'items': 43, 'methods': 'standard', 'time': 1536304833437, 'logs': 'no', 'status': 'completed'}
 
+#columns = ', '.join("`" + str(x).replace('/', '_') + "`" for x in mydict.keys())
+#values = ', '.join("'" + str(x).replace('/', '_') + "'" for x in mydict.values())
+#sql = "INSERT INTO %s ( %s ) VALUES ( %s );" % ('mytable', columns, values)
+#print(sql)
 
 
 def particleSensor():
@@ -31,8 +36,13 @@ def particleSensor():
         # print(aqdata)
     except RuntimeError:
         print("Unable to read from sensor, retrying...")
-
-
+    particledata = {}
+    pm10 = aqdata["pm10 standard"]
+    pm25 = aqdata["pm25 standard"]
+    pm100 = aqdata["pm100 standard"]
+    particledata = {"PM10":pm10,"PM2.5": pm25,"PM100": pm100}
+    return particledata
+ 
     #print()
     #print("Concentration Units (standard)")
     #print("---------------------------------------")
@@ -46,7 +56,7 @@ def particleSensor():
     #    "PM 1.0: %d\tPM2.5: %d\tPM10: %d"
     #    % (aqdata["pm10 env"], aqdata["pm25 env"], aqdata["pm100 env"])
     #    )
-   # print("---------------------------------------")
+    #print("---------------------------------------")
     #print("Particles > 0.3um / 0.1L air:", aqdata["particles 03um"])
     #print("Particles > 0.5um / 0.1L air:", aqdata["particles 05um"])
     #print("Particles > 1.0um / 0.1L air:", aqdata["particles 10um"])
@@ -78,7 +88,7 @@ def insert_record( device, datetime, temp, hum, co2, co2_rating ):
 
 
 def bme680():
-    bme_data = []
+    bme_data = {}
     try:
         i2ca = board.I2C() 
         bme680 = adafruit_bme680.Adafruit_BME680_I2C(i2ca, debug=False)
@@ -90,7 +100,7 @@ def bme680():
             bmepressure = bme680.pressure
             bmealtitude = bme680.altitude
 
-            bme_data = format(bmetemp,'.2f'),format(bmehumidity,'.1f'), bmegas,format(bmepressure, '.2f'), format(bmealtitude, '.2f')
+            bme_data ={"bme temp": format(bmetemp,'.2f'),"bme humidity":format(bmehumidity,'.1f'),"bme gas": bmegas,"bme Pressure":format(bmepressure, '.2f'),"bme altitude": format(bmealtitude, '.2f')}
             #print(bme_data)
         except Exception as e:
             print(e)
@@ -116,7 +126,7 @@ def main():
                 print("Unable to read from CO2 sensor, retrying...")
             if data:
                 #print("Data Available!")
-                co2_Data = []
+                co2_Data ={}
                 temp = scd.temperature * 9/5.0 + 32
 
                 humidity = scd.relative_humidity
@@ -133,13 +143,13 @@ def main():
 
                 if scd.CO2 > 5000:
                     co2_rating = "Very Bad"
-            #try:
-            #    insert_record(device,str(date),format(temp,'.2f'),format(humidity,'.2f'), format(co2,'.2f'), co2_rating)
-            #    #print (device,str(date),format(temp,'.2f'),format(humidity,'.2f'), format(co2,'.2f'), co2_rating)
-            #except:
-            #    pass
+            try:
+                insert_record(device,str(date),format(temp,'.2f'),format(humidity,'.2f'), format(co2,'.2f'), co2_rating)
+                #print (device,str(date),format(temp,'.2f'),format(humidity,'.2f'), format(co2,'.2f'), co2_rating)
+            except:
+                pass
 
-            co2_Data = format(temp,'.2f'),format(co2,'.2f'), co2_rating
+            co2_Data ={"scd30 temp": format(temp,'.2f'),"CO2":format(co2,'.2f'),"CO2 rating": co2_rating}
             #print(co2_Data)
         except:
             print("error 1")
@@ -151,29 +161,25 @@ def main():
 if __name__=="__main__":
 
     #Settings for database connection
-    hostname = '192.168.0.33'
+    hostname = '192.168.0.32'
     username = 'remote'
     password = 'Bandit2015'
-    database = 'Environmental_Data'
+    database = 'eniv_data'
     device = 'dev-pi'
-    combined_data = []
-    co2Data =[]
+    combined_data = {}
+    co2Data ={}
     try:
         co2Data = main()
     except Exception as e:
         print(e)
-        f.write(str(e))
-    
     try:
         bme_data = bme680()
     except Exception as e:
         print(e)
-    combined_data = co2Data + bme_data
-    #print(combined_data)
-    
+    combined_data = co2Data | bme_data
     try:
         particle_data = particleSensor()
-        combined_data =+ particle_data
+        combined_data = dict(list(combined_data.items()) + list(particle_data.items()))
     except Exception as e:
         print(e)
 
