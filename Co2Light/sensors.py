@@ -169,17 +169,18 @@ if __name__=="__main__":
     now = datetime.datetime.now()
     date = now.strftime('%Y-%m-%d %H:%M:%S')
 
-    combined_data = {}
-    co2Data ={"device": device, "dt": date}
+    combined_data = {"device": device, "dt": date}
+    co2Data ={}
     try:
-        co2Data = co2_Data | main()
+        co2Data = main()
+        combined_data = dict(list(combined_data.items()) + list(co2Data.items()))
     except Exception as e:
         print(e)
     try:
         bme_data = bme680()
+        combined_data = dict(list(combined_data.items()) + list(bme_data.items()))
     except Exception as e:
         print(e)
-    combined_data = co2Data | bme_data
     try:
         particle_data = particleSensor()
         combined_data = dict(list(combined_data.items()) + list(particle_data.items()))
